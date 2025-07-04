@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "940161028953",
+    "project_id": "farm-manager-f5e24",
+    "storage_bucket": "farm-manager-f5e24.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:940161028953:android:3be0c699b9bbdce106b248",
+        "android_client_info": {
+          "package_name": "com.group12.farming_management"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXS6Y0V0N5BRw-5EmW-7q1t2NZWg1HPEA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
