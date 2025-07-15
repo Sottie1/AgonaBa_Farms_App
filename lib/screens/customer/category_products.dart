@@ -154,6 +154,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                 stream: FirebaseFirestore.instance
                     .collection('products')
                     .where('category', isEqualTo: widget.categoryName)
+                    .where('approved', isEqualTo: true)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
@@ -204,6 +205,16 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         onAddToCart: () {
                           final cartService =
                               Provider.of<CartService>(context, listen: false);
+                          if (cartService.isInCart(product.id)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Product is already in the cart'),
+                                backgroundColor: Colors.orange,
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                            return;
+                          }
                           cartService.addToCart(product);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

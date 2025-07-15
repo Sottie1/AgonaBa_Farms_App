@@ -15,27 +15,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, dynamic>> _pages = [
     {
       'image': 'assets/onboarding1.jpg',
-      'title': 'Farm Management Made Easy',
+      'title': 'Manage Your Farm Products',
       'description':
-          'Track all your farming activities in one place with real-time updates',
+          'Easily add, edit, and organize your crops and vegetables for better farm management.',
       'color': Color(0xFF4CAF50),
     },
     {
       'image': 'assets/onboarding2.jpg',
-      'title': 'Smart Crop Monitoring',
-      'description': 'Get AI-powered insights for better crop yield and health',
+      'title': 'Browse & Order Fresh Produce',
+      'description':
+          'Customers can explore a variety of farm products and place orders directly from local farmers.',
       'color': Color(0xFF2196F3),
     },
     {
       'image': 'assets/onboarding3.jpg',
-      'title': 'Direct Marketplace',
-      'description': 'Connect with buyers and track live market prices',
+      'title': 'Track Orders & Sales',
+      'description':
+          'Stay updated on your orders and sales with real-time notifications and analytics.',
       'color': Color(0xFF673AB7),
     },
     {
       'image': 'assets/onboarding4.jpg',
-      'title': 'Weather Alerts',
-      'description': 'Get real-time weather updates for your farm',
+      'title': 'Promotions & Categories',
+      'description':
+          'Discover special offers and organize your products by categories for a seamless experience.',
       'color': Color(0xFFFF9800),
     },
   ];
@@ -108,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              Colors.black.withOpacity(0.7),
+              Colors.black.withValues(alpha: 0.7),
               Colors.transparent,
             ],
           ),
@@ -132,7 +135,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               page['description'],
               style: TextStyle(
                 fontSize: 18,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -157,7 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           decoration: BoxDecoration(
             color: _currentPage == index
                 ? Colors.white
-                : Colors.white.withOpacity(0.5),
+                : Colors.white.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -186,7 +189,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: _pages[_currentPage]['color'],
+            color: Colors.green,
             letterSpacing: 1.5,
           ),
         ),

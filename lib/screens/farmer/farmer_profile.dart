@@ -3,7 +3,6 @@ import 'package:farming_management/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:farming_management/models/user_model.dart';
 import 'edit_farmer_profile.dart';
 
 class FarmerProfileScreen extends StatelessWidget {

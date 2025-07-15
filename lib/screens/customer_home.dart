@@ -1,13 +1,9 @@
-// screens/customer_home.dart
+
 import 'package:flutter/material.dart';
 import 'package:farming_management/screens/customer/customer_products.dart';
 import 'package:farming_management/screens/customer/customer_orders.dart';
 import 'package:farming_management/screens/customer/customer_profile.dart';
 import 'package:farming_management/screens/customer/customer_categories.dart';
-import 'package:farming_management/screens/customer/customer_notifications.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
-import 'package:farming_management/auth/auth_service.dart';
 
 class CustomerHome extends StatefulWidget {
   const CustomerHome({super.key});

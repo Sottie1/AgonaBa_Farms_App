@@ -167,6 +167,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
           return Row(
             children: [
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Total Revenue',
                   currencyFormat.format(0.0),
@@ -177,6 +178,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Total Orders',
                   numberFormat.format(0),
@@ -187,6 +189,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Pending',
                   numberFormat.format(0),
@@ -197,6 +200,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Completed',
                   numberFormat.format(0),
@@ -220,6 +224,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
           return Row(
             children: [
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Total Revenue',
                   currencyFormat.format(0.0),
@@ -230,6 +235,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Total Orders',
                   numberFormat.format(0),
@@ -240,6 +246,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Pending',
                   numberFormat.format(0),
@@ -250,6 +257,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 1,
                 child: _buildOverviewCard(
                   'Completed',
                   numberFormat.format(0),
@@ -293,6 +301,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         return Row(
           children: [
             Expanded(
+              flex: 1,
               child: _buildOverviewCard(
                 'Total Revenue',
                 currencyFormat.format(totalRevenue),
@@ -303,6 +312,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
+              flex: 1,
               child: _buildOverviewCard(
                 'Total Orders',
                 numberFormat.format(totalOrders),
@@ -313,6 +323,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
+              flex: 1,
               child: _buildOverviewCard(
                 'Pending',
                 numberFormat.format(pendingOrders),
@@ -323,6 +334,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
+              flex: 1,
               child: _buildOverviewCard(
                 'Completed',
                 numberFormat.format(completedOrders),
@@ -346,7 +358,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -358,32 +370,37 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 20),
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  if (growth.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        growth,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const Spacer(),
-              if (growth.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    growth,
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -416,7 +433,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -439,7 +456,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -528,8 +545,8 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
                       yValueMapper: (SalesData sales, _) => sales.amount,
                       gradient: LinearGradient(
                         colors: [
-                          Colors.green.withOpacity(0.3),
-                          Colors.green.withOpacity(0.1),
+                          Colors.green.withValues(alpha: 0.3),
+                          Colors.green.withValues(alpha: 0.1),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -563,7 +580,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -582,7 +599,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 300,
+            height: 350,
             child: StreamBuilder<QuerySnapshot>(
               stream: _getFilteredProductsStream(),
               builder: (context, snapshot) {
@@ -614,27 +631,52 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
                 final products = snapshot.data!.docs;
                 final performanceData = _generatePerformanceData(products);
 
-                return SfCircularChart(
-                  legend: Legend(
-                    isVisible: true,
-                    position: LegendPosition.bottom,
-                    textStyle: const TextStyle(fontSize: 12),
+                if (performanceData.isEmpty ||
+                    performanceData.every((data) => data.percentage == 0)) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.bar_chart,
+                            size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No product performance data',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return SfCartesianChart(
+                  primaryXAxis: NumericAxis(
+                    minimum: 0,
+                    maximum: 100,
+                    interval: 20,
+                    labelFormat: '{value}%',
+                    majorGridLines:
+                        const MajorGridLines(width: 0.5, color: Colors.grey),
                   ),
-                  series: <CircularSeries>[
-                    DoughnutSeries<ProductPerformance, String>(
+                  primaryYAxis: CategoryAxis(
+                    majorGridLines: const MajorGridLines(width: 0),
+                  ),
+                  plotAreaBorderWidth: 0,
+                  series: <BarSeries<ProductPerformance, String>>[
+                    BarSeries<ProductPerformance, String>(
                       dataSource: performanceData,
                       xValueMapper: (ProductPerformance data, _) =>
                           data.product,
                       yValueMapper: (ProductPerformance data, _) =>
                           data.percentage,
+                      pointColorMapper: (ProductPerformance data, _) =>
+                          data.color,
                       dataLabelSettings: const DataLabelSettings(
                         isVisible: true,
-                        labelPosition: ChartDataLabelPosition.outside,
                         textStyle: TextStyle(
                             fontSize: 12, fontWeight: FontWeight.bold),
                       ),
-                      pointColorMapper: (ProductPerformance data, _) =>
-                          data.color,
+                      borderRadius: const BorderRadius.all(Radius.circular(6)),
                     ),
                   ],
                 );
@@ -654,7 +696,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -743,9 +785,9 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: status.color.withOpacity(0.1),
+        color: status.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: status.color.withOpacity(0.3)),
+        border: Border.all(color: status.color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -800,7 +842,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -882,7 +924,7 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Center(
@@ -1271,10 +1313,33 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
 
   List<ProductPerformance> _generatePerformanceData(
       List<QueryDocumentSnapshot> products) {
+    // Get all orders for this farmer and period
+    final orders = _filterOrdersByPeriod(
+      (ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?)?['orders'] ??
+          [],
+    );
+
     if (products.isEmpty) {
       return [
         ProductPerformance('No Products', 100, Colors.grey),
       ];
+    }
+
+    // Map productId to sales count
+    final Map<String, int> productSales = {};
+    for (final orderDoc in orders) {
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final items = orderData['items'] as List<dynamic>?;
+      if (items == null) continue;
+      for (final item in items) {
+        final productId = item['productId'] as String?;
+        final quantity = item['quantity'] ?? 0;
+        if (productId != null) {
+          productSales[productId] = (productSales[productId] ?? 0) +
+              (quantity is int ? quantity : (quantity as num).toInt());
+        }
+      }
     }
 
     final colors = [
@@ -1284,15 +1349,21 @@ class _FarmAnalyticsScreenState extends State<FarmAnalyticsScreen> {
       Colors.purple,
       Colors.red
     ];
-    return products.take(5).map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
+    // Build performance data for each product
+    final List<ProductPerformance> data = products.map((doc) {
+      final product = doc.data() as Map<String, dynamic>;
       final index = products.indexOf(doc);
+      final sales = productSales[doc.id] ?? 0;
       return ProductPerformance(
-        data['name'] ?? 'Unknown',
-        (data['rating'] ?? 0.0) * 20, // Convert rating to percentage
+        product['name'] ?? 'Unknown',
+        sales.toDouble(),
         colors[index % colors.length],
       );
     }).toList();
+
+    // Sort by sales descending and take top 5
+    data.sort((a, b) => b.percentage.compareTo(a.percentage));
+    return data.take(5).toList();
   }
 
   List<StatusData> _generateStatusData(List<QueryDocumentSnapshot> orders) {

@@ -27,7 +27,7 @@ class ImageService {
     try {
       final List<XFile> images =
           await _picker.pickMultiImage(imageQuality: 85, maxWidth: 1440);
-      return images?.map((xfile) => File(xfile.path)).toList();
+      return images.map((xfile) => File(xfile.path)).toList();
     } catch (e) {
       debugPrint('Image picking error: $e');
       return null;

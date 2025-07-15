@@ -11,6 +11,9 @@ import 'package:provider/provider.dart';
 import 'package:farming_management/screens/customer/all_products.dart';
 import './customer_notifications.dart';
 import 'package:farming_management/auth/auth_service.dart';
+import 'package:farming_management/services/connectivity_service.dart';
+import 'package:farming_management/widgets/offline_banner.dart';
+import 'package:farming_management/widgets/offline_retry_widget.dart';
 
 class CustomerProductsScreen extends StatefulWidget {
   const CustomerProductsScreen({super.key});
@@ -28,6 +31,13 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
   int _currentBannerIndex = 0;
   final CarouselSliderController _carouselController =
       CarouselSliderController();
+
+  // Infinite scrolling variables
+  final List<FarmProduct> _products = [];
+  bool _isLoadingMore = false;
+  bool _hasMoreProducts = true;
+  DocumentSnapshot? _lastDocument;
+  static const int _pageSize = 12;
 
   // Promo banners with asset images
   final List<Map<String, dynamic>> _promoBanners = [
@@ -61,6 +71,8 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
   void initState() {
     super.initState();
     _fetchCategories();
+    _loadInitialProducts();
+    _testDatabaseConnection();
   }
 
   @override
@@ -71,6 +83,15 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
 
   Future<void> _fetchCategories() async {
     try {
+      final connectivityService =
+          Provider.of<ConnectivityService>(context, listen: false);
+
+      // Check connectivity before making the request
+      if (!connectivityService.isConnected) {
+        debugPrint('No internet connection, skipping category fetch');
+        return;
+      }
+
       final querySnapshot = await FirebaseFirestore.instance
           .collection('categories')
           .orderBy('name')
@@ -83,6 +104,145 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
       });
     } catch (e) {
       debugPrint('Error fetching categories: $e');
+      // Don't update state on error to keep existing categories
+    }
+  }
+
+  // Load initial products for infinite scrolling
+  Future<void> _loadInitialProducts() async {
+    try {
+      final connectivityService =
+          Provider.of<ConnectivityService>(context, listen: false);
+
+      if (!connectivityService.isConnected) {
+        debugPrint('No internet connection, skipping initial product load');
+        return;
+      }
+
+      debugPrint('Starting initial product load...');
+      setState(() {
+        _products.clear();
+        _hasMoreProducts = true;
+        _lastDocument = null;
+      });
+
+      await _loadMoreProducts();
+      debugPrint(
+          'Initial product load completed. Total products: ${_products.length}');
+    } catch (e) {
+      debugPrint('Error loading initial products: $e');
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  // Load more products for infinite scrolling
+  Future<void> _loadMoreProducts() async {
+    if (_isLoadingMore || !_hasMoreProducts) {
+      debugPrint(
+          'Skipping load: isLoadingMore=$_isLoadingMore, hasMoreProducts=$_hasMoreProducts');
+      return;
+    }
+
+    try {
+      final connectivityService =
+          Provider.of<ConnectivityService>(context, listen: false);
+
+      if (!connectivityService.isConnected) {
+        debugPrint('No internet connection, skipping product load');
+        return;
+      }
+
+      debugPrint('Starting _loadMoreProducts...');
+      setState(() {
+        _isLoadingMore = true;
+      });
+
+      Query query = FirebaseFirestore.instance
+          .collection('products')
+          .where('approved', isEqualTo: true)
+          .limit(_pageSize);
+
+      // Apply category filter if not "View all"
+      if (_selectedCategory != 'View all') {
+        query = query.where('category', isEqualTo: _selectedCategory);
+        debugPrint('Applied category filter: $_selectedCategory');
+      }
+
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+        debugPrint('Applied startAfterDocument');
+      }
+
+      debugPrint('Executing Firestore query...');
+      final querySnapshot = await query.get();
+      debugPrint(
+          'Query completed. Found ${querySnapshot.docs.length} documents');
+
+      if (querySnapshot.docs.isNotEmpty) {
+        debugPrint('Processing ${querySnapshot.docs.length} documents...');
+        final newProducts = querySnapshot.docs
+            .map((doc) {
+              try {
+                final product = FarmProduct.fromFirestore(doc);
+                debugPrint('Successfully parsed product: ${product.name}');
+                return product;
+              } catch (e) {
+                debugPrint('Error parsing product from document ${doc.id}: $e');
+                return null;
+              }
+            })
+            .where((product) => product != null)
+            .cast<FarmProduct>()
+            .toList();
+
+        setState(() {
+          _products.addAll(newProducts);
+          _lastDocument = querySnapshot.docs.last;
+          _hasMoreProducts = querySnapshot.docs.length == _pageSize;
+        });
+
+        debugPrint(
+            'Loaded ${newProducts.length} products. Total: ${_products.length}');
+      } else {
+        setState(() {
+          _hasMoreProducts = false;
+        });
+        debugPrint('No more products to load');
+      }
+    } catch (e) {
+      debugPrint('Error loading more products: $e');
+      setState(() {
+        _isLoadingMore = false;
+      });
+    } finally {
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  // Refresh products when category changes
+  void _onCategoryChanged(String category) {
+    setState(() {
+      _selectedCategory = category;
+    });
+    _loadInitialProducts();
+  }
+
+  // Test database connection and product count
+  Future<void> _testDatabaseConnection() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('approved', isEqualTo: true)
+          .limit(1)
+          .get();
+      debugPrint(
+          'Database test: Found ${snapshot.docs.length} products in database');
+    } catch (e) {
+      debugPrint('Database test error: $e');
     }
   }
 
@@ -93,242 +253,275 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          // Modern App Bar
-          SliverAppBar(
-            expandedHeight: 120,
-            floating: false,
-            pinned: true,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.green[50]!,
-                      Colors.white,
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Fresh Farm',
-                                    style: theme.textTheme.headlineMedium
-                                        ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey[800],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Discover quality products',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Search Button
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: green?.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() => _isSearching = true);
-                                  showSearch(
-                                    context: context,
-                                    delegate: ProductSearchDelegate(),
-                                  ).then((_) =>
-                                      setState(() => _isSearching = false));
-                                },
-                                child: Icon(
-                                  Icons.search,
-                                  color: green,
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            // Notification Button
-                            Consumer<AuthService>(
-                              builder: (context, authService, child) {
-                                final user = authService.currentUser;
-                                return StreamBuilder<QuerySnapshot>(
-                                  stream: FirebaseFirestore.instance
-                                      .collection('notifications')
-                                      .where('userId', isEqualTo: user?.uid)
-                                      .where('read', isEqualTo: false)
-                                      .snapshots(),
-                                  builder: (context, snapshot) {
-                                    final unreadCount = snapshot.hasData
-                                        ? snapshot.data!.docs.length
-                                        : 0;
-                                    return Stack(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: green?.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const CustomerNotificationsScreen(),
-                                                ),
-                                              );
-                                            },
-                                            child: Icon(
-                                              Icons.notifications_outlined,
-                                              color: green,
-                                              size: 24,
-                                            ),
-                                          ),
-                                        ),
-                                        if (unreadCount > 0)
-                                          Positioned(
-                                            right: 0,
-                                            top: 0,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.red[500],
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 16,
-                                                minHeight: 16,
-                                              ),
-                                              child: Text(
-                                                unreadCount > 99
-                                                    ? '99+'
-                                                    : unreadCount.toString(),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            // Cart Button
-                            Consumer<CartService>(
-                              builder: (context, cartService, child) {
-                                return Stack(
+      body: Column(
+        children: [
+          // Offline Banner
+          const OfflineBanner(),
+          // Main Content
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadInitialProducts,
+              color: Colors.green[700],
+              child: CustomScrollView(
+                slivers: [
+                  // Modern App Bar
+                  SliverAppBar(
+                    expandedHeight: 120,
+                    floating: false,
+                    pinned: true,
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.green[50]!,
+                              Colors.white,
+                            ],
+                          ),
+                        ),
+                        child: SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'AgonaBa Farms',
+                                            style: theme
+                                                .textTheme.headlineMedium
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey[800],
+                                            ),
+                                          ),
+                                          Text(
+                                            'Discover quality products',
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Search Button
                                     Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: green?.withOpacity(0.1),
+                                        color: green?.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: GestureDetector(
                                         onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const CartScreen(),
-                                            ),
-                                          );
+                                          setState(() => _isSearching = true);
+                                          showSearch(
+                                            context: context,
+                                            delegate: ProductSearchDelegate(),
+                                          ).then((_) => setState(
+                                              () => _isSearching = false));
                                         },
                                         child: Icon(
-                                          Icons.shopping_bag_outlined,
+                                          Icons.search,
                                           color: green,
                                           size: 24,
                                         ),
                                       ),
                                     ),
-                                    if (cartService.totalQuantity > 0)
-                                      Positioned(
-                                        right: 0,
-                                        top: 0,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red[500],
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                          constraints: const BoxConstraints(
-                                            minWidth: 16,
-                                            minHeight: 16,
-                                          ),
-                                          child: Text(
-                                            '${cartService.totalQuantity}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
+                                    const SizedBox(width: 12),
+                                    // Notification Button
+                                    Consumer<AuthService>(
+                                      builder: (context, authService, child) {
+                                        final user = authService.currentUser;
+                                        return StreamBuilder<QuerySnapshot>(
+                                          stream: FirebaseFirestore.instance
+                                              .collection('notifications')
+                                              .where('userId',
+                                                  isEqualTo: user?.uid)
+                                              .where('read', isEqualTo: false)
+                                              .snapshots(),
+                                          builder: (context, snapshot) {
+                                            final unreadCount = snapshot.hasData
+                                                ? snapshot.data!.docs.length
+                                                : 0;
+                                            return Stack(
+                                              children: [
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.all(12),
+                                                  decoration: BoxDecoration(
+                                                    color: green?.withValues(
+                                                        alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                  ),
+                                                  child: GestureDetector(
+                                                    onTap: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              const CustomerNotificationsScreen(),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: Icon(
+                                                      Icons
+                                                          .notifications_outlined,
+                                                      color: green,
+                                                      size: 24,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (unreadCount > 0)
+                                                  Positioned(
+                                                    right: 0,
+                                                    top: 0,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.red[500],
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10),
+                                                      ),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                        minWidth: 16,
+                                                        minHeight: 16,
+                                                      ),
+                                                      child: Text(
+                                                        unreadCount > 99
+                                                            ? '99+'
+                                                            : unreadCount
+                                                                .toString(),
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Cart Button
+                                    Consumer<CartService>(
+                                      builder: (context, cartService, child) {
+                                        return Stack(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: green?.withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          const CartScreen(),
+                                                    ),
+                                                  );
+                                                },
+                                                child: Icon(
+                                                  Icons.shopping_bag_outlined,
+                                                  color: green,
+                                                  size: 24,
+                                                ),
+                                              ),
                                             ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
+                                            if (cartService.totalQuantity > 0)
+                                              Positioned(
+                                                right: 0,
+                                                top: 0,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red[500],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    minWidth: 16,
+                                                    minHeight: 16,
+                                                  ),
+                                                  child: Text(
+                                                    '${cartService.totalQuantity}',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
+                                    ),
                                   ],
-                                );
-                              },
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+
+                  // Promo Carousel
+                  SliverToBoxAdapter(
+                    child: _buildPromoCarousel(),
+                  ),
+
+                  // Category Filter
+                  SliverToBoxAdapter(
+                    child: _buildCategoryFilter(),
+                  ),
+
+                  // Products Section Header
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(theme, green),
+                  ),
+
+                  // Products Grid
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: _buildProductGrid(),
+                  ),
+                ],
               ),
             ),
-          ),
-
-          // Promo Carousel
-          SliverToBoxAdapter(
-            child: _buildPromoCarousel(),
-          ),
-
-          // Category Filter
-          SliverToBoxAdapter(
-            child: _buildCategoryFilter(),
-          ),
-
-          // Products Section Header
-          SliverToBoxAdapter(
-            child: _buildSectionHeader(theme, green),
-          ),
-
-          // Products Grid
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: _buildProductGrid(),
           ),
         ],
       ),
@@ -464,9 +657,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(25),
                 onTap: () {
-                  setState(() {
-                    _selectedCategory = category;
-                  });
+                  _onCategoryChanged(category);
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -567,44 +758,108 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
   }
 
   Widget _buildProductGrid() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _buildProductsQuery().snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return SliverToBoxAdapter(
-              child: _buildErrorState(snapshot.error.toString()));
-        }
+    // Show initial loading state
+    if (_products.isEmpty && _isLoadingMore) {
+      debugPrint('Showing loading state - products empty, loading more');
+      return SliverToBoxAdapter(child: _buildLoadingState());
+    }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return SliverToBoxAdapter(child: _buildLoadingState());
-        }
+    // Show error state if no products and not loading
+    if (_products.isEmpty && !_isLoadingMore) {
+      debugPrint('Showing error state - no products and not loading');
+      return SliverToBoxAdapter(
+          child: _buildErrorState('Failed to load products'));
+    }
 
-        if (snapshot.data!.docs.isEmpty) {
-          return SliverToBoxAdapter(child: _buildEmptyState());
-        }
+    debugPrint('Building product grid with ${_products.length} products');
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          // Show loading indicator at the bottom when loading more
+          if (index == _products.length && _isLoadingMore) {
+            return _buildLoadingMoreIndicator();
+          }
 
-        return SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.8,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+          // Show "no more products" message
+          if (index == _products.length &&
+              !_hasMoreProducts &&
+              _products.isNotEmpty) {
+            return _buildNoMoreProductsIndicator();
+          }
+
+          // Load more products when reaching the end
+          if (index == _products.length - 3 &&
+              _hasMoreProducts &&
+              !_isLoadingMore) {
+            _loadMoreProducts();
+          }
+
+          // Return product card
+          if (index < _products.length) {
+            return _buildProductCard(_products[index]);
+          }
+
+          return null;
+        },
+        childCount: _products.length +
+            (_isLoadingMore ? 1 : 0) +
+            (!_hasMoreProducts && _products.isNotEmpty ? 1 : 0),
+      ),
+    );
+  }
+
+  Widget _buildLoadingMoreIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: const Center(
+        child: Column(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Loading more products...',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoMoreProductsIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: const Center(
+        child: Text(
+          'No more products to load',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 12,
           ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              var product =
-                  FarmProduct.fromFirestore(snapshot.data!.docs[index]);
-              return _buildProductCard(product);
-            },
-            childCount: snapshot.data!.docs.length,
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Widget _buildProductCard(FarmProduct product) {
     return Container(
+      height: 280, // Fixed height for the card
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -630,8 +885,8 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image Section (50% of card height)
-            Expanded(
-              flex: 5,
+            SizedBox(
+              height: 140, // 50% of 280
               child: Stack(
                 children: [
                   ClipRRect(
@@ -712,7 +967,6 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
             ),
             // Content Section (50% of card height)
             Expanded(
-              flex: 5,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -750,7 +1004,16 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                         if (product.discount != null &&
                             product.discount! > 0) ...[
                           Text(
-                            '₵${(product.pricePerUnit * (1 - product.discount!)).toStringAsFixed(0)}',
+                            '₵${product.pricePerUnit.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '₵${(product.pricePerUnit * (1 - product.discount!)).toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -759,7 +1022,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                           ),
                         ] else ...[
                           Text(
-                            '₵${product.pricePerUnit.toStringAsFixed(0)}',
+                            '₵${product.pricePerUnit.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -776,15 +1039,35 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                       height: 28,
                       child: ElevatedButton(
                         onPressed: () {
-                          debugPrint(
-                              'Add to cart button pressed for product: ${product.name}');
                           final cartService =
                               Provider.of<CartService>(context, listen: false);
-                          debugPrint(
-                              'CartService found: ${cartService != null}');
+                          if (cartService.isInCart(product.id)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(Icons.info,
+                                        color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Product is already in the cart',
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.orange,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                            return;
+                          }
                           cartService.addToCart(product);
-                          debugPrint(
-                              'Product added to cart. Cart count: ${cartService.itemCount}, Total quantity: ${cartService.totalQuantity}');
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Row(
@@ -885,50 +1168,59 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
   }
 
   Widget _buildErrorState(String error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Something went wrong',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
-              ),
+    return Consumer<ConnectivityService>(
+      builder: (context, connectivityService, child) {
+        // Check if it's a network-related error
+        final isNetworkError = error.toLowerCase().contains('network') ||
+            error.toLowerCase().contains('connection') ||
+            error.toLowerCase().contains('timeout') ||
+            error.toLowerCase().contains('unavailable') ||
+            !connectivityService.isConnected;
+
+        if (isNetworkError) {
+          return OfflineRetryWidget(
+            title: 'No Internet Connection',
+            message: 'Please check your connection and try again',
+            onRetry: () {
+              setState(() {
+                // This will trigger a rebuild and retry the query
+              });
+            },
+            icon: Icons.wifi_off,
+          );
+        }
+
+        // For other errors, show the generic error state
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'Something went wrong',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  error,
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: TextStyle(
-                color: Colors.grey[500],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
-  }
-
-  Query _buildProductsQuery() {
-    Query query = FirebaseFirestore.instance.collection('products');
-
-    if (_selectedCategory != 'View all') {
-      query = query.where('category', isEqualTo: _selectedCategory);
-    }
-
-    if (_searchQuery.isNotEmpty) {
-      query = query
-          .where('name', isGreaterThanOrEqualTo: _searchQuery)
-          .where('name', isLessThan: '${_searchQuery}z');
-    }
-
-    return query;
   }
 }
 
@@ -1092,7 +1384,7 @@ class ProductSearchDelegate extends SearchDelegate {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '₵${product.pricePerUnit}',
+                    '₵${product.pricePerUnit.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.green,

@@ -6,6 +6,10 @@ import 'package:farming_management/screens/customer_home.dart';
 import 'package:farming_management/screens/farmer/farmer_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:farming_management/screens/admin/admin_navbar.dart';
+import 'package:farming_management/widgets/offline_banner.dart';
+import 'package:farming_management/services/connectivity_service.dart';
+import 'package:farming_management/widgets/offline_retry_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,15 +23,28 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final connectivityService =
+        Provider.of<ConnectivityService>(context, listen: false);
+    final isConnected = await connectivityService.checkConnectivity();
+    if (!isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'No internet connection. Please check your network and try again.')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
-      
+
       // 1. First authenticate with Firebase Auth
       await authService.signInWithEmail(
         _emailController.text.trim(),
@@ -52,18 +69,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // 4. Get the user type and navigate accordingly
       final userType = userDoc.data()?['userType'] ?? 'customer';
-      
-      if (userType == 'farmer') {
+
+      if (userType == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => AdminNavBar()),
+        );
+      } else if (userType == 'farmer') {
         // Verify farmer document exists
         final farmerDoc = await FirebaseFirestore.instance
             .collection('farmers')
             .doc(user.uid)
             .get();
-            
+
         if (!farmerDoc.exists) {
           throw AuthException("Farmer profile not found");
         }
-        
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => FarmerNavBar()),
@@ -74,17 +96,16 @@ class _LoginScreenState extends State<LoginScreen> {
             .collection('customers')
             .doc(user.uid)
             .get();
-            
+
         if (!customerDoc.exists) {
           throw AuthException("Customer profile not found");
         }
-        
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => CustomerHome()),
         );
       }
-
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
@@ -101,144 +122,168 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                SizedBox(height: 60),
-                Image.asset(
-                  'assets/farm_logo.png',
-                  height: 120,
-                ),
-                SizedBox(height: 24),
-                Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green[800],
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Login to manage your farm or shop',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                SizedBox(height: 48),
-
-                // Email Field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email, color: Colors.green),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    SizedBox(height: 60),
+                    Image.asset(
+                      'assets/farm_logo.png',
+                      height: 120,
                     ),
-                  ),
-                  validator: (value) => 
-                      !value!.contains('@') ? 'Enter a valid email' : null,
-                ),
-                SizedBox(height: 16),
-
-                // Password Field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock, color: Colors.green),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) => 
-                      value!.isEmpty ? 'Enter your password' : null,
-                ),
-                SizedBox(height: 8),
-                
-                // Forgot Password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ForgotPassword()),
-                    ),
-                    child: Text(
-                      'Forgot Password?',
-                      style: TextStyle(color: Colors.green[600]),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 24),
-
-                // Login Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[600],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    SizedBox(height: 24),
+                    Text(
+                      'Welcome Back',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[800],
                       ),
                     ),
-                    child: _isLoading
-                        ? CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Login to manage your farm or shop',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    SizedBox(height: 48),
+
+                    // Email Field
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email, color: Colors.green),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) =>
+                          !value!.contains('@') ? 'Enter a valid email' : null,
+                    ),
+                    SizedBox(height: 16),
+
+                    // Password Field
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: Icon(Icons.lock, color: Colors.green),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.grey,
                           ),
-                  ),
-                ),
-                SizedBox(height: 24),
-
-                // Divider
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey[400])),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('OR', style: TextStyle(color: Colors.grey[600])),
-                    ),
-                    Expanded(child: Divider(color: Colors.grey[400])),
-                  ],
-                ),
-                SizedBox(height: 24),
-
-                // Register Option
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Don't have an account? "),
-                    TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => RegisterScreen()),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
-                      child: Text(
-                        'Register',
-                        style: TextStyle(
-                          color: Colors.green[600],
-                          fontWeight: FontWeight.bold,
+                      validator: (value) =>
+                          value!.isEmpty ? 'Enter your password' : null,
+                    ),
+                    SizedBox(height: 8),
+
+                    // Forgot Password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => ForgotPassword()),
+                        ),
+                        child: Text(
+                          'Forgot Password?',
+                          style: TextStyle(color: Colors.green[600]),
                         ),
                       ),
                     ),
+                    SizedBox(height: 24),
+
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[600],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? CircularProgressIndicator(color: Colors.white)
+                            : Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+
+                    // Divider
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey[400])),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text('OR',
+                              style: TextStyle(color: Colors.grey[600])),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey[400])),
+                      ],
+                    ),
+                    SizedBox(height: 24),
+
+                    // Register Option
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Don't have an account? "),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => RegisterScreen()),
+                          ),
+                          child: Text(
+                            'Register',
+                            style: TextStyle(
+                              color: Colors.green[600],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: OfflineBanner(),
+          ),
+        ],
       ),
     );
   }

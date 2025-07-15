@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:farming_management/models/cart_item.dart';
-import 'package:farming_management/models/order_model.dart';
-import 'package:farming_management/models/product_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:farming_management/auth/auth_service.dart';
 

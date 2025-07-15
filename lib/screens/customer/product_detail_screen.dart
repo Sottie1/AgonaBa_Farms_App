@@ -8,10 +8,8 @@ import 'package:farming_management/auth/auth_service.dart';
 import 'package:farming_management/models/user_model.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:farming_management/screens/customer/cart_screen.dart';
-import 'package:farming_management/models/cart_item.dart';
 import 'package:farming_management/services/cart_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final FarmProduct product;
@@ -23,7 +21,6 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  int _quantity = 1;
   final ValueNotifier<int> _currentImageIndex = ValueNotifier<int>(0);
   final CarouselSliderController _carouselController =
       CarouselSliderController();
@@ -107,7 +104,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       _buildSpecificationsSection(theme, green),
 
                       // Quantity Section
-                      _buildQuantitySection(theme, green),
+                      // _buildQuantitySection(theme, green), // Removed
 
                       // Reviews Section
                       _buildReviewsSection(theme, green),
@@ -274,6 +271,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     return Container(
       height: 400,
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -292,10 +290,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               carouselController: _carouselController,
               itemBuilder: (context, index, realIndex) {
                 return Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  margin: const EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(0),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -305,7 +302,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(0),
                     child: CachedNetworkImage(
                       imageUrl: images[index],
                       fit: BoxFit.cover,
@@ -330,9 +327,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               },
               options: CarouselOptions(
                 height: 360,
-                viewportFraction: 0.9,
+                viewportFraction: 1.0, // Show one image at a time, full width
                 enableInfiniteScroll: images.length > 1,
-                enlargeCenterPage: true,
+                enlargeCenterPage: false,
                 autoPlay: images.length > 1,
                 autoPlayInterval: const Duration(seconds: 5),
                 onPageChanged: (index, reason) {
@@ -426,13 +423,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      '₵${widget.product.pricePerUnit.toStringAsFixed(2)}',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: green,
+                    if (widget.product.discount != null &&
+                        widget.product.discount! > 0) ...[
+                      Text(
+                        '₵${widget.product.pricePerUnit.toStringAsFixed(2)}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '₵${(widget.product.pricePerUnit * (1 - widget.product.discount!)).toStringAsFixed(2)}',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: green,
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        '₵${widget.product.pricePerUnit.toStringAsFixed(2)}',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: green,
+                        ),
+                      ),
+                    ],
                     const SizedBox(width: 8),
                     Text(
                       '/ ${widget.product.unit}',
@@ -444,17 +460,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 if (widget.product.discount != null &&
                     widget.product.discount! > 0) ...[
-                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(
-                        '₵${(widget.product.pricePerUnit / (1 - widget.product.discount!)).toStringAsFixed(2)}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
@@ -474,6 +481,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.inventory, color: green, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${widget.product.stock} available',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -614,62 +634,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _buildQuantitySection(ThemeData theme, Color? green) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.shopping_basket, color: green, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Quantity',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              children: [
-                QuantitySelector(
-                  quantity: _quantity,
-                  maxQuantity: widget.product.stock,
-                  onChanged: (newQuantity) {
-                    setState(() => _quantity = newQuantity);
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.inventory, color: green, size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${widget.product.stock} ${widget.product.unit} available',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Quantity section removed
 
   Widget _buildReviewsSection(ThemeData theme, Color? green) {
     return Padding(
@@ -866,7 +831,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          // Add Review Button (replaces Buy Now)
+          // Add Review Button
           Expanded(
             flex: 2,
             child: Container(
@@ -954,7 +919,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   onTap: () {
                     final cartService =
                         Provider.of<CartService>(context, listen: false);
-                    cartService.addToCart(widget.product, quantity: _quantity);
+                    if (cartService.isInCart(widget.product.id)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Product is already in the cart'),
+                          backgroundColor: Colors.orange,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    cartService.addToCart(widget.product, quantity: 1);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Row(
@@ -1071,7 +1049,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Submit', style: TextStyle(color: Colors.white)) ,
+                  child: const Text('Submit',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ],
             );

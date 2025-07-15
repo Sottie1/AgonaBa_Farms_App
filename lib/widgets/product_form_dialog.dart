@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:farming_management/models/product_model.dart';
 import 'package:farming_management/services/image_service.dart';
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductFormDialog extends StatefulWidget {
   final FarmProduct? product;

@@ -9,6 +9,7 @@ import 'package:farming_management/screens/splash_screen.dart';
 import 'package:farming_management/services/image_service.dart';
 import 'package:farming_management/services/cart_service.dart';
 import 'package:farming_management/services/notification_service.dart';
+import 'package:farming_management/services/connectivity_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,11 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Initialize connectivity service
+  final connectivityService = ConnectivityService();
+  await connectivityService.initialize();
+
   runApp(
     MultiProvider(
       providers: [
@@ -32,6 +38,9 @@ void main() async {
         ChangeNotifierProvider<NotificationService>(
           create: (_) => NotificationService(),
         ),
+        ChangeNotifierProvider<ConnectivityService>(
+          create: (_) => connectivityService,
+        ),
       ],
       child: MyApp(),
     ),
@@ -44,7 +53,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Farm Management Pro',
+      title: 'AgonaBa Farms',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.green,

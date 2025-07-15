@@ -13,7 +13,7 @@ class SplashScreen extends StatelessWidget {
             CircularProgressIndicator(),
             SizedBox(height: 20),
             Text(
-              'Farm Management Pro',
+              'AgonaBa Farms',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,

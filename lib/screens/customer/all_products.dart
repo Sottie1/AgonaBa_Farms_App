@@ -77,8 +77,10 @@ class AllProductsScreen extends StatelessWidget {
           }
           final categories = catSnapshot.data!;
           return StreamBuilder<QuerySnapshot>(
-            stream:
-                FirebaseFirestore.instance.collection('products').snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('products')
+                .where('approved', isEqualTo: true)
+                .snapshots(),
             builder: (context, prodSnapshot) {
               if (prodSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -259,13 +261,40 @@ class AllProductsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '₵${product.pricePerUnit.toStringAsFixed(2)}',
+                        product.discount != null && product.discount! > 0
+                            ? ''
+                            : '₵${product.pricePerUnit.toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Colors.green,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
                       ),
+                      if (product.discount != null &&
+                          product.discount! > 0) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '₵${product.pricePerUnit.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '₵${(product.pricePerUnit * (1 - product.discount!)).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -326,7 +355,16 @@ class AllProductsScreen extends StatelessWidget {
                           label: Text(inCart ? 'Added' : 'Add to Cart',
                               style: const TextStyle(fontSize: 13)),
                           onPressed: inCart
-                              ? null
+                              ? () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Product is already in the cart'),
+                                      backgroundColor: Colors.orange,
+                                      duration: const Duration(seconds: 1),
+                                    ),
+                                  );
+                                }
                               : () {
                                   cartService.addToCart(product);
                                   ScaffoldMessenger.of(context).showSnackBar(

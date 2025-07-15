@@ -922,6 +922,7 @@ class _FarmerProductsScreenState extends State<FarmerProductsScreen> {
 
     if (result != null) {
       try {
+        // Use ProductService to add product (centralized logic)
         await _productService.addProduct(result);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
