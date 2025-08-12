@@ -7,9 +7,10 @@ import 'package:farming_management/screens/farmer/farmer_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:farming_management/screens/admin/admin_navbar.dart';
+import 'package:farming_management/screens/admin/admin_creation_screen.dart';
 import 'package:farming_management/widgets/offline_banner.dart';
 import 'package:farming_management/services/connectivity_service.dart';
-import 'package:farming_management/widgets/offline_retry_widget.dart';
+import 'package:flutter/services.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,12 +19,88 @@ class LoginScreen extends StatefulWidget {
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _showAdminCreationDialog() {
+    // Add haptic feedback
+    HapticFeedback.heavyImpact();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red[700]),
+              const SizedBox(width: 8),
+              Text(
+                'Admin Creation',
+                style: TextStyle(color: Colors.red[700]),
+              ),
+            ],
+          ),
+          content: const Text(
+            'This feature is for system administrators only. '
+            'Creating admin accounts grants full system access.\n\n'
+            'Are you sure you want to proceed?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminCreationScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[700],
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Proceed'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -132,9 +209,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     SizedBox(height: 60),
-                    Image.asset(
-                      'assets/farm_logo.png',
-                      height: 120,
+                    GestureDetector(
+                      onLongPress: () {
+                        _showAdminCreationDialog();
+                      },
+                      onTapDown: (_) => _animationController.forward(),
+                      onTapUp: (_) => _animationController.reverse(),
+                      onTapCancel: () => _animationController.reverse(),
+                      child: AnimatedBuilder(
+                        animation: _scaleAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _scaleAnimation.value,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Image.asset(
+                                'assets/farm_logo.png',
+                                height: 120,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                     SizedBox(height: 24),
                     Text(

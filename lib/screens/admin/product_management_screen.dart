@@ -16,7 +16,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
   String _search = '';
   final ImageService _imageService = ImageService();
   late TabController _tabController;
-  Set<String> _selectedPending = {};
+  final Set<String> _selectedPending = {};
 
   @override
   void initState() {
@@ -346,7 +346,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     final result = await showDialog<String>(
       context: context,
       builder: (context) {
-        final TextEditingController _feedbackController =
+        final TextEditingController feedbackController =
             TextEditingController();
         return AlertDialog(
           title: Text(data['name'] ?? 'Product Details'),
@@ -369,7 +369,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                   ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _feedbackController,
+                  controller: feedbackController,
                   decoration: const InputDecoration(
                     labelText: 'Feedback (optional, for rejection)',
                     border: OutlineInputBorder(),
@@ -392,7 +392,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
             ),
             OutlinedButton(
               onPressed: () => _approveRejectProduct(doc, false,
-                  feedback: _feedbackController.text),
+                  feedback: feedbackController.text),
               style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Reject'),
             ),

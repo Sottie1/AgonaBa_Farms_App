@@ -4,8 +4,11 @@ import 'package:farming_management/auth/register_screen.dart';
 import 'package:farming_management/models/user_model.dart';
 import 'package:farming_management/screens/customer_home.dart';
 import 'package:farming_management/screens/farmer/farmer_navbar.dart';
+import 'package:farming_management/screens/admin/admin_navbar.dart';
+import 'package:farming_management/screens/admin/admin_creation_screen.dart';
 import 'package:farming_management/screens/onboarding_screen.dart';
 import 'package:farming_management/screens/splash_screen.dart';
+import 'package:farming_management/screens/suspended_user_screen.dart';
 import 'package:farming_management/services/image_service.dart';
 import 'package:farming_management/services/cart_service.dart';
 import 'package:farming_management/services/notification_service.dart';
@@ -70,6 +73,7 @@ class MyApp extends StatelessWidget {
         '/onboarding': (_) => OnboardingScreen(),
         '/login': (_) => LoginScreen(),
         '/register': (_) => RegisterScreen(),
+        '/admin-creation': (_) => AdminCreationScreen(),
       },
     );
   }
@@ -101,9 +105,20 @@ class AuthWrapper extends StatelessWidget {
 
               if (userSnapshot.hasData) {
                 final user = userSnapshot.data!;
-                return user.userType == 'farmer'
-                    ? FarmerNavBar()
-                    : CustomerHome();
+
+                // Check if user is suspended
+                if (user.suspended == true) {
+                  return SuspendedUserScreen(user: user);
+                }
+
+                // Route based on user type
+                if (user.userType == 'admin') {
+                  return AdminNavBar();
+                } else if (user.userType == 'farmer') {
+                  return FarmerNavBar();
+                } else {
+                  return CustomerHome();
+                }
               }
 
               return LoginScreen();

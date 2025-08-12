@@ -192,8 +192,8 @@ class _StatCard extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: color.withOpacity(0.15),
-            child: Icon(icon, color: color, size: 28),
             radius: 24,
+            child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 12),
           Text(value,
@@ -219,8 +219,9 @@ class _SalesTrendChart extends StatelessWidget {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('orders').snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final orders = snapshot.data!.docs;
           final Map<String, double> salesByMonth = {};
           for (var doc in orders) {
@@ -260,8 +261,9 @@ class _SalesTrendChart extends StatelessWidget {
                   sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
-                      if (value < 0 || value >= last6.length)
+                      if (value < 0 || value >= last6.length) {
                         return const SizedBox();
+                      }
                       final key = last6[value.toInt()];
                       return Text(key.substring(2),
                           style: const TextStyle(fontSize: 10));
@@ -296,11 +298,13 @@ class _RecentOrdersList extends StatelessWidget {
             .limit(5)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final orders = snapshot.data!.docs;
-          if (orders.isEmpty)
+          if (orders.isEmpty) {
             return const Center(child: Text('No recent orders'));
+          }
           return ListView.separated(
             itemCount: orders.length,
             separatorBuilder: (_, __) => const Divider(height: 1),

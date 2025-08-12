@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:farming_management/models/product_model.dart';
-import 'package:farming_management/widgets/quantity_selector.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:farming_management/models/review_model.dart';
 import 'package:provider/provider.dart';

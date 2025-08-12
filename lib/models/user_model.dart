@@ -4,7 +4,7 @@ class AppUser {
   final String uid;
   final String email;
   final String name;
-  final String userType; // 'farmer' or 'customer'
+  final String userType; // 'farmer', 'customer', or 'admin'
   final DateTime createdAt;
   final String? photoUrl;
   final String? farmName;
@@ -12,6 +12,12 @@ class AppUser {
   final String? address;
   final String? farmType;
   final String? farmSize;
+  final bool suspended;
+  final String? suspensionReason;
+  final DateTime? suspendedAt;
+  final DateTime? suspendedUntil;
+  final String? suspendedBy;
+  final List<Map<String, dynamic>> suspensionHistory;
 
   AppUser({
     required this.uid,
@@ -25,6 +31,12 @@ class AppUser {
     this.address,
     this.farmType,
     this.farmSize,
+    this.suspended = false,
+    this.suspensionReason,
+    this.suspendedAt,
+    this.suspendedUntil,
+    this.suspendedBy,
+    this.suspensionHistory = const [],
   });
 
   factory AppUser.fromFirestore(DocumentSnapshot doc) {
@@ -41,6 +53,12 @@ class AppUser {
       address: data['address'],
       farmType: data['farmType'],
       farmSize: data['farmSize'],
+      suspended: data['suspended'] ?? false,
+      suspensionReason: data['suspensionReason'],
+      suspendedAt: data['suspendedAt']?.toDate(),
+      suspendedUntil: data['suspendedUntil']?.toDate(),
+      suspendedBy: data['suspendedBy'],
+      suspensionHistory: List<Map<String, dynamic>>.from(data['suspensionHistory'] ?? []),
     );
   }
 
@@ -57,6 +75,12 @@ class AppUser {
       'address': address,
       'farmType': farmType,
       'farmSize': farmSize,
+      'suspended': suspended,
+      'suspensionReason': suspensionReason,
+      'suspendedAt': suspendedAt,
+      'suspendedUntil': suspendedUntil,
+      'suspendedBy': suspendedBy,
+      'suspensionHistory': suspensionHistory,
     };
   }
 }
