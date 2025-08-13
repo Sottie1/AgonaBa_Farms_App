@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'dart:io' show InternetAddress, SocketException;
 
 class ImageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -31,6 +32,60 @@ class ImageService {
     } catch (e) {
       debugPrint('Image picking error: $e');
       return null;
+    }
+  }
+
+  Future<String?> uploadImage(
+      File image, String folder, String filename) async {
+    try {
+      // Compress image before upload
+      final compressedImage = await _compressImage(image);
+
+      // Create a unique filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final finalFilename = '${filename}_$timestamp.jpg';
+
+      // Create reference
+      final ref = _storage.ref().child('$folder/$finalFilename');
+
+      // Configure upload metadata
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'uploadedBy': 'mobile_app',
+          'folder': folder,
+          'timestamp': timestamp.toString(),
+        },
+      );
+
+      // Start the upload
+      final uploadTask = ref.putFile(compressedImage, metadata);
+
+      // Track upload progress
+      uploadTask.snapshotEvents.listen((taskSnapshot) {
+        debugPrint('Upload progress: '
+            '${taskSnapshot.bytesTransferred}/${taskSnapshot.totalBytes} '
+            '(${taskSnapshot.state.toString()})');
+      });
+
+      // Wait for upload to complete
+      final taskSnapshot = await uploadTask;
+
+      // Verify upload completed successfully
+      if (taskSnapshot.state != TaskState.success) {
+        throw Exception('Upload failed with state: ${taskSnapshot.state}');
+      }
+
+      // Get download URL
+      final downloadUrl = await taskSnapshot.ref.getDownloadURL();
+      debugPrint('Image uploaded successfully: $downloadUrl');
+      return downloadUrl;
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase Storage Error: ${e.code} - ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('Unexpected error uploading image: $e');
+      rethrow;
     }
   }
 
@@ -108,7 +163,7 @@ class ImageService {
     }
   }
 
-  Future<void> deleteProductImage(String imageUrl) async {
+  Future<void> deleteImage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty) return;
 
@@ -125,6 +180,10 @@ class ImageService {
       debugPrint('Unexpected error deleting image: $e');
       rethrow;
     }
+  }
+
+  Future<void> deleteProductImage(String imageUrl) async {
+    await deleteImage(imageUrl);
   }
 
   Future<bool> checkNetworkConnection() async {

@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'category_management_screen.dart';
+import 'product_management_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -60,21 +61,28 @@ class AdminDashboardScreen extends StatelessWidget {
                     color: purpleAccent,
                     collection: 'orders'),
                 const SizedBox(width: 16),
+                _FirestoreCountStatCard(
+                    title: 'Categories',
+                    icon: Icons.category,
+                    color: tealAccent,
+                    collection: 'categories'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
                 _FirestoreSumStatCard(
                     title: 'Sales',
                     icon: Icons.attach_money,
-                    color: tealAccent,
+                    color: Colors.indigo[400]!,
                     collection: 'orders',
                     field: 'totalAmount'),
+                const SizedBox(width: 16),
+                Container(
+                  width: 16,
+                ),
               ],
             ),
-            const SizedBox(height: 32),
-            Divider(thickness: 1, color: Colors.grey[200]),
-            const SizedBox(height: 24),
-            const Text('Sales Trend',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            _SalesTrendChart(),
             const SizedBox(height: 32),
             Divider(thickness: 1, color: Colors.grey[200]),
             const SizedBox(height: 24),
@@ -210,81 +218,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// Sales Trend Chart (last 6 months)
-class _SalesTrendChart extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 180,
-      child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('orders').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final orders = snapshot.data!.docs;
-          final Map<String, double> salesByMonth = {};
-          for (var doc in orders) {
-            final data = doc.data() as Map<String, dynamic>;
-            final date = (data['createdAt'] as Timestamp?)?.toDate();
-            final amount = (data['totalAmount'] ?? 0).toDouble();
-            if (date != null) {
-              final key = DateFormat('yyyy-MM').format(date);
-              salesByMonth[key] = (salesByMonth[key] ?? 0) + amount;
-            }
-          }
-          final sortedKeys = salesByMonth.keys.toList()..sort();
-          final last6 = sortedKeys.length > 6
-              ? sortedKeys.sublist(sortedKeys.length - 6)
-              : sortedKeys;
-          return BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              barGroups: List.generate(last6.length, (i) {
-                final key = last6[i];
-                return BarChartGroupData(
-                  x: i,
-                  barRods: [
-                    BarChartRodData(
-                      toY: salesByMonth[key]!,
-                      color: Colors.green[700],
-                      width: 18,
-                    ),
-                  ],
-                );
-              }),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      if (value < 0 || value >= last6.length) {
-                        return const SizedBox();
-                      }
-                      final key = last6[value.toInt()];
-                      return Text(key.substring(2),
-                          style: const TextStyle(fontSize: 10));
-                    },
-                  ),
-                ),
-                rightTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              ),
-              borderData: FlBorderData(show: false),
-              gridData: FlGridData(show: false),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
 // Recent Orders List
 class _RecentOrdersList extends StatelessWidget {
   @override
@@ -332,14 +265,66 @@ class _RecentOrdersList extends StatelessWidget {
 class _RecentActivitiesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // If you have an activities collection, use it here. Otherwise, show a placeholder.
     return SizedBox(
       height: 120,
-      child: Center(
-        child: Text(
-          'No recent activities to display.',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Quick Actions',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const CategoryManagementScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.category),
+                  label: const Text('Manage Categories'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ProductManagementScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.shopping_basket),
+                  label: const Text('Manage Products'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
