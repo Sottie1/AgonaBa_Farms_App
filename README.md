@@ -4,7 +4,7 @@ A comprehensive Flutter application for managing farm operations, connecting far
 
 ## 📱 Overview
 
-The Farming Management App is a dual-platform application that serves both farmers and customers. Farmers can manage their products, track orders, and analyze farm performance, while customers can browse products, place orders, and track their purchases.
+The Agonaba Farm Management app is a dual-platform application that serves both farmers and customers. Farmers can manage their products, track orders, and analyze farm performance, while customers can browse products, place orders, and track their purchases.
 
 ## 🚀 Features
 

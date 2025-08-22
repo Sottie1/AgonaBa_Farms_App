@@ -12,6 +12,9 @@ class FarmOrder {
   final double totalAmount;
   final String shippingAddress;
   final String paymentMethod;
+  final String? paymentStatus;
+  final String? paymentReference;
+  final String? transactionId;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -27,6 +30,9 @@ class FarmOrder {
     required this.totalAmount,
     required this.shippingAddress,
     required this.paymentMethod,
+    this.paymentStatus,
+    this.paymentReference,
+    this.transactionId,
     required this.createdAt,
     this.updatedAt,
   });
@@ -45,6 +51,9 @@ class FarmOrder {
       totalAmount: (data['totalAmount'] ?? 0).toDouble(),
       shippingAddress: data['shippingAddress'] ?? '',
       paymentMethod: data['paymentMethod'] ?? '',
+      paymentStatus: data['paymentStatus'],
+      paymentReference: data['paymentReference'],
+      transactionId: data['transactionId'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: data['updatedAt']?.toDate(),
     );
@@ -62,6 +71,9 @@ class FarmOrder {
       'totalAmount': totalAmount,
       'shippingAddress': shippingAddress,
       'paymentMethod': paymentMethod,
+      'paymentStatus': paymentStatus,
+      'paymentReference': paymentReference,
+      'transactionId': transactionId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };

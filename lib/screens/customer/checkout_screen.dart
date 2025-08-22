@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:farming_management/models/cart_item.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:farming_management/auth/auth_service.dart';
+import 'package:farming_management/services/paystack_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -87,6 +88,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     value: 'Cash on Delivery', child: Text('Cash on Delivery')),
                 DropdownMenuItem(
                     value: 'Mobile Money', child: Text('Mobile Money')),
+                DropdownMenuItem(
+                    value: 'Paystack', child: Text('Paystack (Card/Mobile Money)')),
               ],
               onChanged: (value) => setState(() => _paymentMethod = value!),
               decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -144,6 +147,149 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SnackBar(content: Text('Please enter a shipping address')));
       return;
     }
+
+    // Handle Paystack payment first if selected
+    if (_paymentMethod == 'Paystack') {
+      await _processPaystackPayment();
+      return;
+    }
+
+    // Process other payment methods
+    await _processRegularOrder();
+  }
+
+  Future<void> _processPaystackPayment() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      final appUser = await AuthService().getCurrentUser();
+      final customerEmail = user.email ?? '';
+      final customerPhone = appUser?.phone ?? '';
+
+      // Generate unique reference for Paystack
+      final now = DateTime.now();
+      final reference = 'PAY${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${user.uid.substring(0, 8)}';
+
+      // Initialize Paystack payment
+      await PaystackService.initializePayment(
+        amount: _total.toString(),
+        email: customerEmail,
+        reference: reference,
+        callbackUrl: 'https://yourdomain.com/payment-callback', // Replace with your actual callback URL
+        onSuccess: (transactionId) async {
+          // Payment successful, create order
+          await _createOrderWithPayment(
+            reference: reference,
+            transactionId: transactionId,
+            paymentStatus: 'paid',
+          );
+        },
+        onError: (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Payment failed: $error')),
+          );
+        },
+        onCancel: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payment cancelled')),
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error processing payment: $e')),
+      );
+    }
+  }
+
+  Future<void> _createOrderWithPayment({
+    required String reference,
+    required String transactionId,
+    required String paymentStatus,
+  }) async {
+    setState(() => _isPlacingOrder = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      final appUser = await AuthService().getCurrentUser();
+      final customerPhone = appUser?.phone ?? '';
+
+      // Group cart items by farmerId
+      final itemsByFarmer = <String, List<CartItem>>{};
+      for (final item in widget.cartItems) {
+        itemsByFarmer.putIfAbsent(item.product.farmerId, () => []).add(item);
+      }
+
+      for (final entry in itemsByFarmer.entries) {
+        final farmerId = entry.key;
+        final farmerName = entry.value.first.product.farmerName;
+        final items = entry.value;
+
+        // Generate a unique order number for each farmer's order
+        final now = DateTime.now();
+        final orderNumber =
+            'ORD${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}${farmerId.substring(0, 4)}';
+
+        final orderData = {
+          'orderNumber': orderNumber,
+          'customerId': user.uid,
+          'customerName': user.displayName ?? '',
+          'customerEmail': user.email ?? '',
+          'customerPhone': customerPhone,
+          'status': 'pending',
+          'items': items
+              .map((item) => {
+                    'productId': item.product.id,
+                    'name': item.product.name,
+                    'price': item.product.pricePerUnit,
+                    'quantity': item.quantity,
+                    'imageUrl': item.product.imageUrl,
+                    'unit': item.product.unit,
+                  })
+              .toList(),
+          'totalAmount': items.fold(0.0,
+              (sum, item) => sum + item.product.pricePerUnit * item.quantity),
+          'shippingAddress': _addressController.text.trim(),
+          'paymentMethod': _paymentMethod,
+          'paymentStatus': paymentStatus,
+          'paymentReference': reference,
+          'transactionId': transactionId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'farmerId': farmerId,
+          'farmerName': farmerName,
+        };
+
+        final orderDoc = await FirebaseFirestore.instance
+            .collection('orders')
+            .add(orderData);
+
+        // Create notification for the farmer
+        await _createFarmerNotification(
+          farmerId: farmerId,
+          orderNumber: orderNumber,
+          customerName: user.displayName ?? 'Customer',
+          totalAmount: items.fold(0.0,
+              (sum, item) => sum + item.product.pricePerUnit * item.quantity),
+          orderId: orderDoc.id,
+        );
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment successful! Order placed.')),
+      );
+      Navigator.pop(context, true); // Indicate success to clear cart
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creating order: $e')),
+      );
+    } finally {
+      setState(() => _isPlacingOrder = false);
+    }
+  }
+
+  Future<void> _processRegularOrder() async {
     setState(() => _isPlacingOrder = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -190,6 +336,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               (sum, item) => sum + item.product.pricePerUnit * item.quantity),
           'shippingAddress': _addressController.text.trim(),
           'paymentMethod': _paymentMethod,
+          'paymentStatus': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
           'farmerId': farmerId,
           'farmerName': farmerName,
@@ -211,11 +358,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order(s) placed successfully!')));
+        const SnackBar(content: Text('Order(s) placed successfully!')),
+      );
       Navigator.pop(context, true); // Indicate success to clear cart
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error placing order: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error placing order: $e')),
+      );
     } finally {
       setState(() => _isPlacingOrder = false);
     }

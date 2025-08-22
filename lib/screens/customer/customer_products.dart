@@ -859,7 +859,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
 
   Widget _buildProductCard(FarmProduct product) {
     return Container(
-      height: 280, // Fixed height for the card
+      height: 325,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -884,9 +884,9 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section (50% of card height)
+            // Image Section (40% of card height)
             SizedBox(
-              height: 140, // 50% of 280
+              height: 128,
               child: Stack(
                 children: [
                   ClipRRect(
@@ -965,7 +965,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                 ],
               ),
             ),
-            // Content Section (50% of card height)
+            // Content Section
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -1036,7 +1036,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                     // Add to Cart Button
                     SizedBox(
                       width: double.infinity,
-                      height: 28,
+                      height: 36,
                       child: ElevatedButton(
                         onPressed: () {
                           final cartService =
@@ -1096,15 +1096,15 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                           backgroundColor: Colors.green[700],
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          padding: EdgeInsets.zero,
-                          elevation: 1,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          elevation: 2,
                         ),
                         child: const Text(
                           'Add to Cart',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
